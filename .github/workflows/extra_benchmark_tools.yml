@@ -19,7 +19,7 @@ env:
   NDK_VERSION: "29.0.14206865"
 
 jobs:
-  android-arm64-llama-bench:
+  android-arm64:
     runs-on: ubuntu-latest
 
     steps:
