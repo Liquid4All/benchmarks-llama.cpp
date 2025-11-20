@@ -205,6 +205,63 @@ jobs:
           path: llama-bench-win-${{ matrix.backend }}-${{ matrix.arch }}.zip
           name: llama-bench-win-${{ matrix.backend }}-${{ matrix.arch }}.zip
 
+  windows-cuda:
+    runs-on: windows-2022
+
+    strategy:
+      matrix:
+        cuda: ['12.4']
+
+    steps:
+      - name: Clone
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: Install ccache
+        uses: ggml-org/ccache-action@v1.2.16
+        with:
+          key: windows-cuda-bench-${{ matrix.cuda }}
+          variant: ccache
+          evict-old-files: 1d
+
+      - name: Install Cuda Toolkit
+        uses: ./.github/actions/windows-setup-cuda
+        with:
+          cuda_version: ${{ matrix.cuda }}
+
+      - name: Install Ninja
+        id: install_ninja
+        run: |
+          choco install ninja
+
+      - name: Build
+        id: cmake_build
+        shell: cmd
+        run: |
+          call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvarsall.bat" x64
+          cmake -S . -B build -G "Ninja Multi-Config" ^
+            -DGGML_BACKEND_DL=ON ^
+            -DGGML_NATIVE=OFF ^
+            -DGGML_CUDA=ON ^
+            -DLLAMA_CURL=OFF ^
+            -DLLAMA_BUILD_TOOLS=ON ^
+            -DLLAMA_BUILD_EXAMPLES=OFF ^
+            -DLLAMA_BUILD_TESTS=OFF ^
+            -DLLAMA_BUILD_SERVER=OFF
+          set /A NINJA_JOBS=%NUMBER_OF_PROCESSORS%-1
+          cmake --build build --config Release -j %NINJA_JOBS% --target llama-bench
+
+      - name: Pack artifacts
+        id: pack_artifacts
+        run: |
+          7z a llama-bench-win-cuda-${{ matrix.cuda }}-x64.zip .\build\bin\Release\*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: llama-bench-win-cuda-${{ matrix.cuda }}-x64.zip
+          name: llama-bench-win-cuda-${{ matrix.cuda }}-x64.zip
+
   release:
     if: ${{ ( github.event_name == 'push' && github.ref == 'refs/heads/benchmarks' ) || github.event.inputs.create_release == 'true' }}
 
@@ -219,6 +276,7 @@ jobs:
       - android-arm64
       - macOS-arm64
       - windows
+      - windows-cuda
 
     steps:
       - name: Clone
