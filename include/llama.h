@@ -907,7 +907,7 @@ extern "C" {
     LLAMA_API void llama_set_warmup(struct llama_context * ctx, bool warmup);
 
     // Set whether to skip batched compute (prefill) operations
-    // If true, batched decode calls will return immediately without computing (used for depth prefill in benchmarks)
+    // If true, batched compute calls will return immediately without computing (used for depth prefill in benchmarks)
     LLAMA_API void llama_set_skip_batched_compute(struct llama_context * ctx, bool skip);
 
     // Get whether batched compute is being skipped
