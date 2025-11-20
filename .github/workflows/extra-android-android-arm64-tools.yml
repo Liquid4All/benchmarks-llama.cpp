@@ -60,7 +60,7 @@ jobs:
       - run: sdkmanager "ndk;${{ env.NDK_VERSION }}"
 
       - run: |
-          echo "ANDROID_NDK=$HOME/.android/sdk/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
+          echo "ANDROID_NDK=${ANDROID_SDK_ROOT}/ndk/${{ env.NDK_VERSION }}" >> $GITHUB_ENV
 
       - run: |
           sudo apt-get update
