@@ -906,11 +906,7 @@ extern "C" {
     // If true, all model tensors are activated during llama_decode() to load and cache their weights.
     LLAMA_API void llama_set_warmup(struct llama_context * ctx, bool warmup);
 
-    // Set whether to skip batched compute (prefill) operations
-    // If true, batched compute calls will return immediately without computing (used for depth prefill in benchmarks)
     LLAMA_API void llama_set_skip_batched_compute(struct llama_context * ctx, bool skip);
-
-    // Get whether batched compute is being skipped
     LLAMA_API bool llama_get_skip_batched_compute(struct llama_context * ctx);
 
     // Set abort callback

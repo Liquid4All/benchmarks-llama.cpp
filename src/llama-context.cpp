@@ -710,8 +710,6 @@ void llama_context::set_causal_attn(bool value) {
 }
 
 void llama_context::set_warmup(bool value) {
-    LLAMA_LOG_DEBUG("%s: value = %d\n", __func__, value);
-
     cparams.warmup = value;
 }
 
@@ -1475,7 +1473,6 @@ llm_graph_params llama_context::graph_params(
 ggml_status llama_context::graph_compute(
             ggml_cgraph * gf,
                    bool   batched) {
-    // skip batched compute if requested (used for depth prefill in benchmarks)
     if (batched && skip_batched_compute) {
         return GGML_STATUS_SUCCESS;
     }

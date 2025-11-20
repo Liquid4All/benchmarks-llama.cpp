@@ -408,8 +408,7 @@ static void print_usage(int /* argc */, char ** argv) {
     printf("  -v, --verbose                             verbose output\n");
     printf("  --progress                                print test progress indicators\n");
     printf("  --no-warmup                               skip warmup runs before benchmarking\n");
-    printf(
-        "  --enable-depth-computation                enable computation during depth prefill (disabled by default)\n");
+    printf("  --enable-depth-computation                enable computation during depth prefill (disabled by default)\n");
     if (llama_supports_rpc()) {
         printf("  -rpc, --rpc <rpc_servers>                 register RPC devices (comma separated)\n");
     }
@@ -504,15 +503,15 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
     const std::string arg_prefix    = "--";
     const char        split_delim   = ',';
 
-    params.verbose                  = cmd_params_defaults.verbose;
-    params.output_format            = cmd_params_defaults.output_format;
-    params.output_format_stderr     = cmd_params_defaults.output_format_stderr;
-    params.reps                     = cmd_params_defaults.reps;
-    params.numa                     = cmd_params_defaults.numa;
-    params.prio                     = cmd_params_defaults.prio;
-    params.delay                    = cmd_params_defaults.delay;
-    params.progress                 = cmd_params_defaults.progress;
-    params.no_warmup                = cmd_params_defaults.no_warmup;
+    params.verbose              = cmd_params_defaults.verbose;
+    params.output_format        = cmd_params_defaults.output_format;
+    params.output_format_stderr = cmd_params_defaults.output_format_stderr;
+    params.reps                 = cmd_params_defaults.reps;
+    params.numa                 = cmd_params_defaults.numa;
+    params.prio                 = cmd_params_defaults.prio;
+    params.delay                = cmd_params_defaults.delay;
+    params.progress             = cmd_params_defaults.progress;
+    params.no_warmup            = cmd_params_defaults.no_warmup;
     params.enable_depth_computation = cmd_params_defaults.enable_depth_computation;
 
     for (int i = 1; i < argc; i++) {
