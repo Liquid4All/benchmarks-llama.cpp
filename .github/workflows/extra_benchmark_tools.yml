@@ -170,7 +170,7 @@ jobs:
 
     needs:
       - android-arm64
-      - windows
+      # - windows
 
     steps:
       - name: Clone
