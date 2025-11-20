@@ -44,8 +44,11 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - uses: seanmiddleditch/gha-setup-ninja@v5
-      
+      - run: |
+          which ninja || true
+          ninja --version || true
+          apt-get install -y ninja-build
+
       - uses: ggml-org/ccache-action@v1.2.16
         with:
           key: android-arm64-llama-bench
