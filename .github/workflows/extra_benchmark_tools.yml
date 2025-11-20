@@ -175,7 +175,26 @@ jobs:
 
       - name: Determine tag name
         id: tag
-        uses: ./.github/actions/get-tag-name
+        run: |
+          # Try to get existing tag
+          if git describe --tags --exact-match 2>/dev/null; then
+            TAG_NAME=$(git describe --tags --exact-match)
+            echo "tag_exists=true" >> $GITHUB_OUTPUT
+          else
+            # Generate tag name based on date and short SHA
+            TAG_NAME="bench-tools-$(date +%Y%m%d)-$(git rev-parse --short HEAD)"
+            echo "tag_exists=false" >> $GITHUB_OUTPUT
+          fi
+          echo "name=${TAG_NAME}" >> $GITHUB_OUTPUT
+          echo "Generated tag name: ${TAG_NAME}"
+
+      - name: Create tag if needed
+        if: steps.tag.outputs.tag_exists == 'false'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${{ steps.tag.outputs.name }}" -m "Benchmark tools release ${{ steps.tag.outputs.name }}"
+          git push origin "${{ steps.tag.outputs.name }}"
 
       - name: Download artifacts
         id: download-artifact
