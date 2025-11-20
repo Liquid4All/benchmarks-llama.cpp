@@ -2,6 +2,11 @@ name: Extra Benchmark Tools
 
 on:
   workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Create new release'
+        required: true
+        type: boolean
   push:
     branches:
       - benchmarks
