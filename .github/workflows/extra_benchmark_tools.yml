@@ -64,10 +64,16 @@ jobs:
             -DLLAMA_BUILD_SERVER=OFF
           cmake --build build --config Release --target llama-bench
 
+      - name: Pack artifacts
+        id: pack_artifacts
+        run: |
+          cd build/bin
+          zip -r ../../llama-bench-android-arm64-v8a.zip ./*
+
       - uses: actions/upload-artifact@v4
         with:
-          name: llama-bench-android-arm64-v8a
-          path: build/bin/*
+          name: llama-bench-android-arm64-v8a.zip
+          path: llama-bench-android-arm64-v8a.zip
           if-no-files-found: error
 
   windows:
@@ -209,16 +215,9 @@ jobs:
           mkdir -p release
           mv -v artifact/*.zip release/ || true
 
-          # Package Android artifacts
-          if [ -d "artifact/llama-bench-android-arm64-v8a" ]; then
-            cd artifact
-            zip -r ../release/llama-bench-${{ steps.tag.outputs.name }}-android-arm64-v8a.zip llama-bench-android-arm64-v8a/
-            cd ..
-          fi
-
-          # Rename Windows artifacts to include tag
+          # Rename all artifacts to include tag
           cd release
-          for f in llama-bench-win-*.zip; do
+          for f in llama-bench-*.zip; do
             if [ -f "$f" ]; then
               newname="llama-bench-${{ steps.tag.outputs.name }}-${f#llama-bench-}"
               mv "$f" "$newname"
