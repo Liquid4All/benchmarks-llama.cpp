@@ -76,6 +76,53 @@ jobs:
           path: llama-bench-android-arm64-v8a.zip
           if-no-files-found: error
 
+  macOS-arm64:
+    runs-on: macos-14
+
+    steps:
+      - name: Clone
+        id: checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: ccache
+        uses: ggml-org/ccache-action@v1.2.16
+        with:
+          key: macOS-latest-cmake-arm64-bench
+          evict-old-files: 1d
+
+      - name: Build
+        id: cmake_build
+        run: |
+          sysctl -a
+          cmake -B build \
+            -DCMAKE_INSTALL_RPATH='@loader_path' \
+            -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON \
+            -DLLAMA_FATAL_WARNINGS=ON \
+            -DGGML_METAL_USE_BF16=ON \
+            -DGGML_METAL_EMBED_LIBRARY=ON \
+            -DGGML_RPC=ON \
+            -DGGML_NATIVE=OFF \
+            -DLLAMA_CURL=OFF \
+            -DLLAMA_BUILD_TOOLS=ON \
+            -DLLAMA_BUILD_EXAMPLES=OFF \
+            -DLLAMA_BUILD_TESTS=OFF \
+            -DLLAMA_BUILD_SERVER=OFF
+          cmake --build build --config Release -j $(sysctl -n hw.logicalcpu) --target llama-bench
+
+      - name: Pack artifacts
+        id: pack_artifacts
+        run: |
+          cd build/bin
+          zip -r ../../llama-bench-macos-arm64.zip ./*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: llama-bench-macos-arm64.zip
+          name: llama-bench-macos-arm64.zip
+
   windows:
     runs-on: windows-2025
 
@@ -227,6 +274,7 @@ jobs:
 
     needs:
       - android-arm64
+      - macOS-arm64
       - windows
       - windows-cuda
 
