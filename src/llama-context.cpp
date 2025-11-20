@@ -710,12 +710,12 @@ void llama_context::set_causal_attn(bool value) {
 }
 
 void llama_context::set_warmup(bool value) {
+    LLAMA_LOG_DEBUG("%s: value = %d\n", __func__, value);
+
     cparams.warmup = value;
 }
 
 void llama_context::set_skip_batched_compute(bool value) {
-    LLAMA_LOG_DEBUG("%s: value = %d\n", __func__, value);
-
     skip_batched_compute = value;
 }
 
