@@ -1,3 +1,7 @@
+#include "common.h"
+#include "ggml.h"
+#include "llama.h"
+
 #include <algorithm>
 #include <array>
 #include <cassert>
@@ -9,6 +13,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <iostream>
 #include <iterator>
 #include <map>
 #include <numeric>
@@ -16,12 +21,8 @@
 #include <sstream>
 #include <string>
 #include <thread>
-#include <vector>
 #include <unordered_set>
-
-#include "common.h"
-#include "ggml.h"
-#include "llama.h"
+#include <vector>
 
 #ifdef _WIN32
 #    define WIN32_LEAN_AND_MEAN
@@ -37,7 +38,8 @@ static uint64_t get_time_ns() {
     return std::chrono::nanoseconds(clock::now().time_since_epoch()).count();
 }
 
-static bool tensor_buft_override_equal(const llama_model_tensor_buft_override& a, const llama_model_tensor_buft_override& b) {
+static bool tensor_buft_override_equal(const llama_model_tensor_buft_override & a,
+                                       const llama_model_tensor_buft_override & b) {
     if (a.pattern != b.pattern) {
         // cString comparison that may be null
         if (a.pattern == nullptr || b.pattern == nullptr) {
@@ -53,7 +55,8 @@ static bool tensor_buft_override_equal(const llama_model_tensor_buft_override& a
     return true;
 }
 
-static bool vec_tensor_buft_override_equal(const std::vector<llama_model_tensor_buft_override>& a, const std::vector<llama_model_tensor_buft_override>& b) {
+static bool vec_tensor_buft_override_equal(const std::vector<llama_model_tensor_buft_override> & a,
+                                           const std::vector<llama_model_tensor_buft_override> & b) {
     if (a.size() != b.size()) {
         return false;
     }
@@ -65,7 +68,8 @@ static bool vec_tensor_buft_override_equal(const std::vector<llama_model_tensor_
     return true;
 }
 
-static bool vec_vec_tensor_buft_override_equal(const std::vector<std::vector<llama_model_tensor_buft_override>>& a, const std::vector<std::vector<llama_model_tensor_buft_override>>& b) {
+static bool vec_vec_tensor_buft_override_equal(const std::vector<std::vector<llama_model_tensor_buft_override>> & a,
+                                               const std::vector<std::vector<llama_model_tensor_buft_override>> & b) {
     if (a.size() != b.size()) {
         return false;
     }
@@ -180,7 +184,8 @@ static void register_rpc_server_list(const std::string & servers) {
     }
 
     using add_rpc_server_fn = ggml_backend_reg_t (*)(const char * endpoint);
-    auto * ggml_backend_rpc_add_server_fn = (add_rpc_server_fn) ggml_backend_reg_get_proc_address(rpc_reg, "ggml_backend_rpc_add_server");
+    auto * ggml_backend_rpc_add_server_fn =
+        (add_rpc_server_fn) ggml_backend_reg_get_proc_address(rpc_reg, "ggml_backend_rpc_add_server");
     if (!ggml_backend_rpc_add_server_fn) {
         throw std::invalid_argument("failed to find RPC add server function");
     }
@@ -274,9 +279,9 @@ static std::vector<int> parse_int_range(const std::string & s) {
     // first[-last[(+|*)step]]
     std::regex range_regex(R"(^(\d+)(?:-(\d+)(?:([\+|\*])(\d+))?)?(?:,|$))");
 
-    std::smatch match;
+    std::smatch                 match;
     std::string::const_iterator search_start(s.cbegin());
-    std::vector<int> result;
+    std::vector<int>            result;
     while (std::regex_search(search_start, s.cend(), match, range_regex)) {
         int  first = std::stoi(match[1]);
         int  last  = match[2].matched ? std::stoi(match[2]) : first;
@@ -311,41 +316,42 @@ static std::vector<int> parse_int_range(const std::string & s) {
 }
 
 struct cmd_params {
-    std::vector<std::string>         model;
-    std::vector<int>                 n_prompt;
-    std::vector<int>                 n_gen;
-    std::vector<std::pair<int, int>> n_pg;
-    std::vector<int>                 n_depth;
-    std::vector<int>                 n_batch;
-    std::vector<int>                 n_ubatch;
-    std::vector<ggml_type>           type_k;
-    std::vector<ggml_type>           type_v;
-    std::vector<int>                 n_threads;
-    std::vector<std::string>         cpu_mask;
-    std::vector<bool>                cpu_strict;
-    std::vector<int>                 poll;
-    std::vector<int>                 n_gpu_layers;
-    std::vector<int>                 n_cpu_moe;
-    std::vector<llama_split_mode>    split_mode;
-    std::vector<int>                 main_gpu;
-    std::vector<bool>                no_kv_offload;
-    std::vector<bool>                flash_attn;
-    std::vector<std::vector<ggml_backend_dev_t>> devices;
-    std::vector<std::vector<float>>  tensor_split;
+    std::vector<std::string>                                   model;
+    std::vector<int>                                           n_prompt;
+    std::vector<int>                                           n_gen;
+    std::vector<std::pair<int, int>>                           n_pg;
+    std::vector<int>                                           n_depth;
+    std::vector<int>                                           n_batch;
+    std::vector<int>                                           n_ubatch;
+    std::vector<ggml_type>                                     type_k;
+    std::vector<ggml_type>                                     type_v;
+    std::vector<int>                                           n_threads;
+    std::vector<std::string>                                   cpu_mask;
+    std::vector<bool>                                          cpu_strict;
+    std::vector<int>                                           poll;
+    std::vector<int>                                           n_gpu_layers;
+    std::vector<int>                                           n_cpu_moe;
+    std::vector<llama_split_mode>                              split_mode;
+    std::vector<int>                                           main_gpu;
+    std::vector<bool>                                          no_kv_offload;
+    std::vector<bool>                                          flash_attn;
+    std::vector<std::vector<ggml_backend_dev_t>>               devices;
+    std::vector<std::vector<float>>                            tensor_split;
     std::vector<std::vector<llama_model_tensor_buft_override>> tensor_buft_overrides;
-    std::vector<bool>                use_mmap;
-    std::vector<bool>                embeddings;
-    std::vector<bool>                no_op_offload;
-    std::vector<bool>                no_host;
-    ggml_numa_strategy               numa;
-    int                              reps;
-    ggml_sched_priority              prio;
-    int                              delay;
-    bool                             verbose;
-    bool                             progress;
-    bool                             no_warmup;
-    output_formats                   output_format;
-    output_formats                   output_format_stderr;
+    std::vector<bool>                                          use_mmap;
+    std::vector<bool>                                          embeddings;
+    std::vector<bool>                                          no_op_offload;
+    std::vector<bool>                                          no_host;
+    ggml_numa_strategy                                         numa;
+    int                                                        reps;
+    ggml_sched_priority                                        prio;
+    int                                                        delay;
+    bool                                                       verbose;
+    bool                                                       progress;
+    bool                                                       no_warmup;
+    bool                                                       enable_depth_computation;
+    output_formats                                             output_format;
+    output_formats                                             output_format_stderr;
 };
 
 static const cmd_params cmd_params_defaults = {
@@ -382,6 +388,7 @@ static const cmd_params cmd_params_defaults = {
     /* verbose              */ false,
     /* progress             */ false,
     /* no_warmup            */ false,
+    /* enable_depth_computation */ false,
     /* output_format        */ MARKDOWN,
     /* output_format_stderr */ NONE,
 };
@@ -406,6 +413,8 @@ static void print_usage(int /* argc */, char ** argv) {
     printf("  -v, --verbose                             verbose output\n");
     printf("  --progress                                print test progress indicators\n");
     printf("  --no-warmup                               skip warmup runs before benchmarking\n");
+    printf(
+        "  --enable-depth-computation                enable computation during depth prefill (disabled by default)\n");
     if (llama_supports_rpc()) {
         printf("  -rpc, --rpc <rpc_servers>                 register RPC devices (comma separated)\n");
     }
@@ -500,15 +509,16 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
     const std::string arg_prefix    = "--";
     const char        split_delim   = ',';
 
-    params.verbose              = cmd_params_defaults.verbose;
-    params.output_format        = cmd_params_defaults.output_format;
-    params.output_format_stderr = cmd_params_defaults.output_format_stderr;
-    params.reps                 = cmd_params_defaults.reps;
-    params.numa                 = cmd_params_defaults.numa;
-    params.prio                 = cmd_params_defaults.prio;
-    params.delay                = cmd_params_defaults.delay;
-    params.progress             = cmd_params_defaults.progress;
-    params.no_warmup            = cmd_params_defaults.no_warmup;
+    params.verbose                  = cmd_params_defaults.verbose;
+    params.output_format            = cmd_params_defaults.output_format;
+    params.output_format_stderr     = cmd_params_defaults.output_format_stderr;
+    params.reps                     = cmd_params_defaults.reps;
+    params.numa                     = cmd_params_defaults.numa;
+    params.prio                     = cmd_params_defaults.prio;
+    params.delay                    = cmd_params_defaults.delay;
+    params.progress                 = cmd_params_defaults.progress;
+    params.no_warmup                = cmd_params_defaults.no_warmup;
+    params.enable_depth_computation = cmd_params_defaults.enable_depth_computation;
 
     for (int i = 1; i < argc; i++) {
         arg = argv[i];
@@ -646,7 +656,8 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
                 for (auto * dev : devices) {
                     size_t free, total;
                     ggml_backend_dev_memory(dev, &free, &total);
-                    printf("  %s: %s (%zu MiB, %zu MiB free)\n", ggml_backend_dev_name(dev), ggml_backend_dev_description(dev), total / 1024 / 1024, free / 1024 / 1024);
+                    printf("  %s: %s (%zu MiB, %zu MiB free)\n", ggml_backend_dev_name(dev),
+                           ggml_backend_dev_description(dev), total / 1024 / 1024, free / 1024 / 1024);
                 }
                 exit(0);
             } else if (arg == "-t" || arg == "--threads") {
@@ -820,12 +831,12 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
                     invalid_param = true;
                     break;
                 }
-                auto * value = argv[i];
+                auto *                                                         value = argv[i];
                 /* static */ std::map<std::string, ggml_backend_buffer_type_t> buft_list;
                 if (buft_list.empty()) {
                     // enumerate all the devices and add their buffer types to the list
                     for (size_t i = 0; i < ggml_backend_dev_count(); ++i) {
-                        auto * dev = ggml_backend_dev_get(i);
+                        auto * dev  = ggml_backend_dev_get(i);
                         auto * buft = ggml_backend_dev_buffer_type(dev);
                         if (buft) {
                             buft_list[ggml_backend_buft_name(buft)] = buft;
@@ -833,16 +844,16 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
                     }
                 }
                 auto override_group_span_len = std::strcspn(value, ",");
-                bool last_group = false;
+                bool last_group              = false;
                 do {
                     if (override_group_span_len == 0) {
                         // Adds an empty override-tensors for an empty span
-                        params.tensor_buft_overrides.push_back({{}});
+                        params.tensor_buft_overrides.push_back({ {} });
                         if (value[override_group_span_len] == '\0') {
-                            value = &value[override_group_span_len];
+                            value      = &value[override_group_span_len];
                             last_group = true;
                         } else {
-                            value = &value[override_group_span_len + 1];
+                            value                   = &value[override_group_span_len + 1];
                             override_group_span_len = std::strcspn(value, ",");
                         }
                         continue;
@@ -854,19 +865,19 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
                     // only parse these args once in this program.
                     auto * override_group = value;
                     if (value[override_group_span_len] == '\0') {
-                        value = &value[override_group_span_len];
+                        value      = &value[override_group_span_len];
                         last_group = true;
                     } else {
                         value[override_group_span_len] = '\0';
-                        value = &value[override_group_span_len + 1];
+                        value                          = &value[override_group_span_len + 1];
                     }
                     std::vector<llama_model_tensor_buft_override> group_tensor_buft_overrides{};
-                    auto override_span_len = std::strcspn(override_group, ";");
+                    auto                                          override_span_len = std::strcspn(override_group, ";");
                     while (override_span_len > 0) {
                         auto * override = override_group;
                         if (override_group[override_span_len] != '\0') {
                             override_group[override_span_len] = '\0';
-                            override_group = &override_group[override_span_len + 1];
+                            override_group                    = &override_group[override_span_len + 1];
                         } else {
                             override_group = &override_group[override_span_len];
                         }
@@ -876,8 +887,8 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
                             break;
                         }
                         override[tensor_name_span_len] = '\0';
-                        auto * tensor_name = override;
-                        auto * buffer_type = &override[tensor_name_span_len + 1];
+                        auto * tensor_name             = override;
+                        auto * buffer_type             = &override[tensor_name_span_len + 1];
                         if (buft_list.find(buffer_type) == buft_list.end()) {
                             printf("error: unrecognized buffer type '%s'\n", buffer_type);
                             printf("Available buffer types:\n");
@@ -887,13 +898,13 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
                             invalid_param = true;
                             break;
                         }
-                        group_tensor_buft_overrides.push_back({tensor_name, buft_list.at(buffer_type)});
+                        group_tensor_buft_overrides.push_back({ tensor_name, buft_list.at(buffer_type) });
                         override_span_len = std::strcspn(override_group, ";");
                     }
                     if (invalid_param) {
                         break;
                     }
-                    group_tensor_buft_overrides.push_back({nullptr,nullptr});
+                    group_tensor_buft_overrides.push_back({ nullptr, nullptr });
                     params.tensor_buft_overrides.push_back(group_tensor_buft_overrides);
                     override_group_span_len = std::strcspn(value, ",");
                 } while (!last_group);
@@ -933,6 +944,8 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
                 params.progress = true;
             } else if (arg == "--no-warmup") {
                 params.no_warmup = true;
+            } else if (arg == "--enable-depth-computation") {
+                params.enable_depth_computation = true;
             } else {
                 invalid_param = true;
                 break;
@@ -1034,31 +1047,31 @@ static cmd_params parse_cmd_params(int argc, char ** argv) {
 }
 
 struct cmd_params_instance {
-    std::string        model;
-    int                n_prompt;
-    int                n_gen;
-    int                n_depth;
-    int                n_batch;
-    int                n_ubatch;
-    ggml_type          type_k;
-    ggml_type          type_v;
-    int                n_threads;
-    std::string        cpu_mask;
-    bool               cpu_strict;
-    int                poll;
-    int                n_gpu_layers;
-    int                n_cpu_moe;
-    llama_split_mode   split_mode;
-    int                main_gpu;
-    bool               no_kv_offload;
-    bool               flash_attn;
-    std::vector<ggml_backend_dev_t> devices;
-    std::vector<float> tensor_split;
+    std::string                                   model;
+    int                                           n_prompt;
+    int                                           n_gen;
+    int                                           n_depth;
+    int                                           n_batch;
+    int                                           n_ubatch;
+    ggml_type                                     type_k;
+    ggml_type                                     type_v;
+    int                                           n_threads;
+    std::string                                   cpu_mask;
+    bool                                          cpu_strict;
+    int                                           poll;
+    int                                           n_gpu_layers;
+    int                                           n_cpu_moe;
+    llama_split_mode                              split_mode;
+    int                                           main_gpu;
+    bool                                          no_kv_offload;
+    bool                                          flash_attn;
+    std::vector<ggml_backend_dev_t>               devices;
+    std::vector<float>                            tensor_split;
     std::vector<llama_model_tensor_buft_override> tensor_buft_overrides;
-    bool               use_mmap;
-    bool               embeddings;
-    bool               no_op_offload;
-    bool               no_host;
+    bool                                          use_mmap;
+    bool                                          embeddings;
+    bool                                          no_op_offload;
+    bool                                          no_host;
 
     llama_model_params to_llama_mparams() const {
         llama_model_params mparams = llama_model_default_params();
@@ -1083,7 +1096,7 @@ struct cmd_params_instance {
             }
         } else {
             static std::vector<llama_model_tensor_buft_override> merged;
-            static std::vector<std::string> patterns;
+            static std::vector<std::string>                      patterns;
 
             merged.clear();
             patterns.clear();
@@ -1100,8 +1113,7 @@ struct cmd_params_instance {
 
             for (int i = 0; i < n_cpu_moe; ++i) {
                 patterns.push_back(llm_ffn_exps_block_regex(i));
-                merged.push_back({ patterns.back().c_str(),
-                                ggml_backend_cpu_buffer_type() });
+                merged.push_back({ patterns.back().c_str(), ggml_backend_cpu_buffer_type() });
             }
 
             merged.push_back({ nullptr, nullptr });
@@ -1114,10 +1126,8 @@ struct cmd_params_instance {
 
     bool equal_mparams(const cmd_params_instance & other) const {
         return model == other.model && n_gpu_layers == other.n_gpu_layers && n_cpu_moe == other.n_cpu_moe &&
-               split_mode == other.split_mode &&
-               main_gpu == other.main_gpu && use_mmap == other.use_mmap && tensor_split == other.tensor_split &&
-               devices == other.devices &&
-               no_host == other.no_host &&
+               split_mode == other.split_mode && main_gpu == other.main_gpu && use_mmap == other.use_mmap &&
+               tensor_split == other.tensor_split && devices == other.devices && no_host == other.no_host &&
                vec_tensor_buft_override_equal(tensor_buft_overrides, other.tensor_buft_overrides);
     }
 
@@ -1275,77 +1285,76 @@ static std::vector<cmd_params_instance> get_cmd_params_instances(const cmd_param
 }
 
 struct test {
-    static const std::string build_commit;
-    static const int         build_number;
-    const std::string        cpu_info;
-    const std::string        gpu_info;
-    std::string              model_filename;
-    std::string              model_type;
-    uint64_t                 model_size;
-    uint64_t                 model_n_params;
-    int                      n_batch;
-    int                      n_ubatch;
-    int                      n_threads;
-    std::string              cpu_mask;
-    bool                     cpu_strict;
-    int                      poll;
-    ggml_type                type_k;
-    ggml_type                type_v;
-    int                      n_gpu_layers;
-    int                      n_cpu_moe;
-    llama_split_mode         split_mode;
-    int                      main_gpu;
-    bool                     no_kv_offload;
-    bool                     flash_attn;
-    std::vector<ggml_backend_dev_t> devices;
-    std::vector<float>       tensor_split;
+    static const std::string                      build_commit;
+    static const int                              build_number;
+    const std::string                             cpu_info;
+    const std::string                             gpu_info;
+    std::string                                   model_filename;
+    std::string                                   model_type;
+    uint64_t                                      model_size;
+    uint64_t                                      model_n_params;
+    int                                           n_batch;
+    int                                           n_ubatch;
+    int                                           n_threads;
+    std::string                                   cpu_mask;
+    bool                                          cpu_strict;
+    int                                           poll;
+    ggml_type                                     type_k;
+    ggml_type                                     type_v;
+    int                                           n_gpu_layers;
+    int                                           n_cpu_moe;
+    llama_split_mode                              split_mode;
+    int                                           main_gpu;
+    bool                                          no_kv_offload;
+    bool                                          flash_attn;
+    std::vector<ggml_backend_dev_t>               devices;
+    std::vector<float>                            tensor_split;
     std::vector<llama_model_tensor_buft_override> tensor_buft_overrides;
-    bool                     use_mmap;
-    bool                     embeddings;
-    bool                     no_op_offload;
-    bool                     no_host;
-    int                      n_prompt;
-    int                      n_gen;
-    int                      n_depth;
-    std::string              test_time;
-    std::vector<uint64_t>    samples_ns;
+    bool                                          use_mmap;
+    bool                                          embeddings;
+    bool                                          no_op_offload;
+    bool                                          no_host;
+    int                                           n_prompt;
+    int                                           n_gen;
+    int                                           n_depth;
+    std::string                                   test_time;
+    std::vector<uint64_t>                         samples_ns;
 
     test(const cmd_params_instance & inst, const llama_model * lmodel, const llama_context * ctx) :
         cpu_info(get_cpu_info()),
         gpu_info(get_gpu_info()) {
-
         model_filename = inst.model;
         char buf[128];
         llama_model_desc(lmodel, buf, sizeof(buf));
-        model_type     = buf;
-        model_size     = llama_model_size(lmodel);
-        model_n_params = llama_model_n_params(lmodel);
-        n_batch        = inst.n_batch;
-        n_ubatch       = inst.n_ubatch;
-        n_threads      = inst.n_threads;
-        cpu_mask       = inst.cpu_mask;
-        cpu_strict     = inst.cpu_strict;
-        poll           = inst.poll;
-        type_k         = inst.type_k;
-        type_v         = inst.type_v;
-        n_gpu_layers   = inst.n_gpu_layers;
-        n_cpu_moe      = inst.n_cpu_moe;
-        split_mode     = inst.split_mode;
-        main_gpu       = inst.main_gpu;
-        no_kv_offload  = inst.no_kv_offload;
-        flash_attn     = inst.flash_attn;
-        devices        = inst.devices;
-        tensor_split   = inst.tensor_split;
+        model_type            = buf;
+        model_size            = llama_model_size(lmodel);
+        model_n_params        = llama_model_n_params(lmodel);
+        n_batch               = inst.n_batch;
+        n_ubatch              = inst.n_ubatch;
+        n_threads             = inst.n_threads;
+        cpu_mask              = inst.cpu_mask;
+        cpu_strict            = inst.cpu_strict;
+        poll                  = inst.poll;
+        type_k                = inst.type_k;
+        type_v                = inst.type_v;
+        n_gpu_layers          = inst.n_gpu_layers;
+        n_cpu_moe             = inst.n_cpu_moe;
+        split_mode            = inst.split_mode;
+        main_gpu              = inst.main_gpu;
+        no_kv_offload         = inst.no_kv_offload;
+        flash_attn            = inst.flash_attn;
+        devices               = inst.devices;
+        tensor_split          = inst.tensor_split;
         tensor_buft_overrides = inst.tensor_buft_overrides;
-        use_mmap       = inst.use_mmap;
-        embeddings     = inst.embeddings;
-        no_op_offload  = inst.no_op_offload;
-        no_host        = inst.no_host;
-        n_prompt       = inst.n_prompt;
-        n_gen          = inst.n_gen;
-        n_depth        = inst.n_depth;
+        use_mmap              = inst.use_mmap;
+        embeddings            = inst.embeddings;
+        no_op_offload         = inst.no_op_offload;
+        no_host               = inst.no_host;
+        n_prompt              = inst.n_prompt;
+        n_gen                 = inst.n_gen;
+        n_depth               = inst.n_depth;
         // RFC 3339 date-time format
-        time_t t       = time(NULL);
+        time_t t              = time(NULL);
         std::strftime(buf, sizeof(buf), "%FT%TZ", gmtime(&t));
         test_time = buf;
 
@@ -1391,16 +1400,25 @@ struct test {
     }
 
     static const std::vector<std::string> & get_fields() {
-        static const std::vector<std::string> fields = {
-            "build_commit",   "build_number",   "cpu_info",      "gpu_info",       "backends",
-            "model_filename", "model_type",     "model_size",    "model_n_params", "n_batch",
-            "n_ubatch",       "n_threads",      "cpu_mask",      "cpu_strict",     "poll",
-            "type_k",         "type_v",         "n_gpu_layers",  "n_cpu_moe",      "split_mode",
-            "main_gpu",       "no_kv_offload",  "flash_attn",    "devices",        "tensor_split",
-            "tensor_buft_overrides",            "use_mmap",      "embeddings",     "no_op_offload",
-            "no_host",        "n_prompt",       "n_gen",          "n_depth",       "test_time",
-            "avg_ns",         "stddev_ns",      "avg_ts",         "stddev_ts"
-        };
+        static const std::vector<std::string> fields = { "build_commit",   "build_number",
+                                                         "cpu_info",       "gpu_info",
+                                                         "backends",       "model_filename",
+                                                         "model_type",     "model_size",
+                                                         "model_n_params", "n_batch",
+                                                         "n_ubatch",       "n_threads",
+                                                         "cpu_mask",       "cpu_strict",
+                                                         "poll",           "type_k",
+                                                         "type_v",         "n_gpu_layers",
+                                                         "n_cpu_moe",      "split_mode",
+                                                         "main_gpu",       "no_kv_offload",
+                                                         "flash_attn",     "devices",
+                                                         "tensor_split",   "tensor_buft_overrides",
+                                                         "use_mmap",       "embeddings",
+                                                         "no_op_offload",  "no_host",
+                                                         "n_prompt",       "n_gen",
+                                                         "n_depth",        "test_time",
+                                                         "avg_ns",         "stddev_ns",
+                                                         "avg_ts",         "stddev_ts" };
         return fields;
     }
 
@@ -1446,7 +1464,7 @@ struct test {
             GGML_ASSERT(tensor_buft_overrides[0].pattern == nullptr);
             tensor_buft_overrides_str += "none";
         } else {
-            for (size_t i = 0; i < tensor_buft_overrides.size()-1; i++) {
+            for (size_t i = 0; i < tensor_buft_overrides.size() - 1; i++) {
                 // Last element of tensor_buft_overrides is always a null pattern
                 if (tensor_buft_overrides[i].pattern == nullptr) {
                     tensor_buft_overrides_str += "none";
@@ -1786,7 +1804,9 @@ struct markdown_printer : public printer {
         if (params.tensor_split.size() > 1 || params.tensor_split != cmd_params_defaults.tensor_split) {
             fields.emplace_back("tensor_split");
         }
-        if (params.tensor_buft_overrides.size() > 1 || !vec_vec_tensor_buft_override_equal(params.tensor_buft_overrides, cmd_params_defaults.tensor_buft_overrides)) {
+        if (params.tensor_buft_overrides.size() > 1 ||
+            !vec_vec_tensor_buft_override_equal(params.tensor_buft_overrides,
+                                                cmd_params_defaults.tensor_buft_overrides)) {
             fields.emplace_back("tensor_buft_overrides");
         }
         if (params.use_mmap.size() > 1 || params.use_mmap != cmd_params_defaults.use_mmap) {
@@ -1920,9 +1940,9 @@ struct sql_printer : public printer {
 };
 
 struct ctx_state {
-    int depth = 0; // in tokens
+    int depth = 0;             // in tokens
 
-    std::vector<uint8_t> buf; // the llama_context state buffer
+    std::vector<uint8_t> buf;  // the llama_context state buffer
 };
 
 static bool test_prompt(llama_context * ctx, int n_prompt, int n_batch, int n_threads) {
@@ -1938,7 +1958,7 @@ static bool test_prompt(llama_context * ctx, int n_prompt, int n_batch, int n_th
 
     while (n_processed < n_prompt) {
         int n_tokens = std::min(n_prompt - n_processed, n_batch);
-        tokens[0]    = n_processed == 0 && llama_vocab_get_add_bos(vocab) ? llama_vocab_bos(vocab) : std::rand() % n_vocab;
+        tokens[0] = n_processed == 0 && llama_vocab_get_add_bos(vocab) ? llama_vocab_bos(vocab) : std::rand() % n_vocab;
         for (int i = 1; i < n_tokens; i++) {
             tokens[i] = std::rand() % n_vocab;
         }
@@ -2026,8 +2046,10 @@ int main(int argc, char ** argv) {
         return 1;
     }
     auto * cpu_reg = ggml_backend_dev_backend_reg(cpu_dev);
-    auto * ggml_threadpool_new_fn = (decltype(ggml_threadpool_new) *) ggml_backend_reg_get_proc_address(cpu_reg, "ggml_threadpool_new");
-    auto * ggml_threadpool_free_fn = (decltype(ggml_threadpool_free) *) ggml_backend_reg_get_proc_address(cpu_reg, "ggml_threadpool_free");
+    auto * ggml_threadpool_new_fn =
+        (decltype(ggml_threadpool_new) *) ggml_backend_reg_get_proc_address(cpu_reg, "ggml_threadpool_new");
+    auto * ggml_threadpool_free_fn =
+        (decltype(ggml_threadpool_free) *) ggml_backend_reg_get_proc_address(cpu_reg, "ggml_threadpool_free");
 
     // initialize llama.cpp
     if (!params.verbose) {
@@ -2160,7 +2182,9 @@ int main(int argc, char ** argv) {
                         fprintf(stderr, "llama-bench: benchmark %d/%zu: depth run %d/%d\n", params_idx, params_count,
                                 i + 1, params.reps);
                     }
+                    llama_set_skip_batched_compute(ctx, !params.enable_depth_computation);
                     bool res = test_prompt(ctx, t.n_depth, t.n_batch, t.n_threads);
+                    llama_set_skip_batched_compute(ctx, false);
                     if (!res) {
                         fprintf(stderr, "%s: error: failed to run depth\n", __func__);
                         exit(1);
@@ -2172,8 +2196,8 @@ int main(int argc, char ** argv) {
                     llama_state_seq_get_data(ctx, cstate.buf.data(), cstate.buf.size(), 0);
                 } else {
                     if (params.progress) {
-                        fprintf(stderr, "llama-bench: benchmark %d/%zu: depth run %d/%d (cached)\n", params_idx, params_count,
-                                i + 1, params.reps);
+                        fprintf(stderr, "llama-bench: benchmark %d/%zu: depth run %d/%d (cached)\n", params_idx,
+                                params_count, i + 1, params.reps);
                     }
                 }
             }

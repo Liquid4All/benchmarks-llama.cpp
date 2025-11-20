@@ -715,6 +715,16 @@ void llama_context::set_warmup(bool value) {
     cparams.warmup = value;
 }
 
+void llama_context::set_skip_batched_compute(bool value) {
+    LLAMA_LOG_DEBUG("%s: value = %d\n", __func__, value);
+
+    skip_batched_compute = value;
+}
+
+bool llama_context::get_skip_batched_compute() const {
+    return skip_batched_compute;
+}
+
 void llama_context::set_adapter_lora(
             llama_adapter_lora * adapter,
             float scale) {
@@ -1465,6 +1475,11 @@ llm_graph_params llama_context::graph_params(
 ggml_status llama_context::graph_compute(
             ggml_cgraph * gf,
                    bool   batched) {
+    // skip batched compute if requested (used for depth prefill in benchmarks)
+    if (batched && skip_batched_compute) {
+        return GGML_STATUS_SUCCESS;
+    }
+
     int n_threads        = batched ? cparams.n_threads_batch : cparams.n_threads;
     ggml_threadpool_t tp = batched ? threadpool_batch        : threadpool;
 
@@ -2463,6 +2478,14 @@ void llama_set_causal_attn(llama_context * ctx, bool causal_attn) {
 
 void llama_set_warmup(llama_context * ctx, bool warmup) {
     ctx->set_warmup(warmup);
+}
+
+void llama_set_skip_batched_compute(llama_context * ctx, bool skip) {
+    ctx->set_skip_batched_compute(skip);
+}
+
+bool llama_get_skip_batched_compute(llama_context * ctx) {
+    return ctx->get_skip_batched_compute();
 }
 
 void llama_synchronize(llama_context * ctx) {
