@@ -906,6 +906,9 @@ extern "C" {
     // If true, all model tensors are activated during llama_decode() to load and cache their weights.
     LLAMA_API void llama_set_warmup(struct llama_context * ctx, bool warmup);
 
+    LLAMA_API void llama_set_skip_batched_compute(struct llama_context * ctx, bool skip);
+    LLAMA_API bool llama_get_skip_batched_compute(struct llama_context * ctx);
+
     // Set abort callback
     LLAMA_API void llama_set_abort_callback(struct llama_context * ctx, ggml_abort_callback abort_callback, void * abort_callback_data);
 
