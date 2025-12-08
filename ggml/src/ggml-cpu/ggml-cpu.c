@@ -490,6 +490,15 @@ static inline void ggml_thread_cpu_relax(void) {
 static inline void ggml_thread_cpu_relax(void) {
     _mm_pause();
 }
+#elif defined(__riscv)
+static inline void ggml_thread_cpu_relax(void) {
+    #ifdef __riscv_zihintpause
+        __asm__ __volatile__ ("pause");
+    #else
+        /* Encoding of the pause instruction */
+        __asm__ __volatile__ (".4byte 0x100000F");
+    #endif
+}
 #else
 static inline void ggml_thread_cpu_relax(void) {;}
 #endif
@@ -2697,6 +2706,11 @@ struct ggml_cplan ggml_graph_plan(
     if (n_threads <= 0) {
         n_threads = threadpool ? threadpool->n_threads_max : GGML_DEFAULT_N_THREADS;
     }
+
+#if defined(__EMSCRIPTEN__) && !defined(__EMSCRIPTEN_PTHREADS__)
+    // Emscripten without pthreads support can only use a single thread
+    n_threads = 1;
+#endif
 
     size_t work_size = 0;
 
