@@ -339,6 +339,127 @@ jobs:
           path: llama-bench-win-cuda-${{ matrix.cuda }}-x64.zip
           name: llama-bench-win-cuda-${{ matrix.cuda }}-x64.zip
 
+  ubuntu-cpu:
+    strategy:
+      matrix:
+        include:
+          - build: 'x64'
+            os: ubuntu-22.04
+          - build: 'arm64'
+            os: ubuntu-22.04-arm
+          - build: 's390x'
+            os: ubuntu-24.04-s390x
+          - build: 'ppc64le'
+            os: ubuntu-24.04-ppc64le
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Clone
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: ccache
+        uses: ggml-org/ccache-action@v1.2.16
+        with:
+          key: ubuntu-cpu-bench-${{ matrix.build }}
+          evict-old-files: 1d
+
+      - name: Build
+        id: cmake_build
+        run: |
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGGML_NATIVE=OFF \
+            -DGGML_BACKEND_DL=ON \
+            -DGGML_CPU_ALL_VARIANTS=ON \
+            -DLLAMA_CURL=OFF \
+            -DGGML_OPENMP=ON \
+            -DLLAMA_BUILD_TOOLS=ON \
+            -DLLAMA_BUILD_EXAMPLES=OFF \
+            -DLLAMA_BUILD_TESTS=OFF \
+            -DLLAMA_BUILD_SERVER=OFF
+          cmake --build build --config Release --target llama-bench -j $(nproc)
+
+      - name: Pack artifacts
+        id: pack_artifacts
+        run: |
+          cd build/bin
+          tar -czvf ../../llama-bench-ubuntu-cpu-${{ matrix.build }}.tar.gz ./*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: llama-bench-ubuntu-cpu-${{ matrix.build }}.tar.gz
+          name: llama-bench-ubuntu-cpu-${{ matrix.build }}.tar.gz
+          if-no-files-found: error
+
+  ubuntu-vulkan:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Clone
+        id: checkout
+        uses: actions/checkout@v4
+
+      - name: ccache
+        uses: ggml-org/ccache-action@v1.2.16
+        with:
+          key: ubuntu-24-vulkan-bench
+          evict-old-files: 1d
+
+      - name: Dependencies
+        id: depends
+        run: |
+          sudo add-apt-repository -y ppa:kisak/kisak-mesa
+          sudo apt-get update -y
+          sudo apt-get install -y build-essential mesa-vulkan-drivers libxcb-xinput0 libxcb-xinerama0 libxcb-cursor-dev
+
+      - name: Get latest Vulkan SDK version
+        id: vulkan_sdk_version
+        run: |
+          echo "VULKAN_SDK_VERSION=$(curl https://vulkan.lunarg.com/sdk/latest/linux.txt)" >> "$GITHUB_ENV"
+
+      - name: Use Vulkan SDK Cache
+        uses: actions/cache@v4
+        id: cache-sdk
+        with:
+          path: ./vulkan_sdk
+          key: vulkan-sdk-${{ env.VULKAN_SDK_VERSION }}-${{ runner.os }}
+
+      - name: Setup Vulkan SDK
+        if: steps.cache-sdk.outputs.cache-hit != 'true'
+        uses: ./.github/actions/linux-setup-vulkan
+        with:
+          path: ./vulkan_sdk
+          version: ${{ env.VULKAN_SDK_VERSION }}
+
+      - name: Build
+        id: cmake_build
+        run: |
+          source ./vulkan_sdk/setup-env.sh
+          cmake -B build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DGGML_NATIVE=OFF \
+            -DGGML_CPU=OFF \
+            -DGGML_BACKEND_DL=ON \
+            -DGGML_VULKAN=ON \
+            -DLLAMA_CURL=OFF
+          cmake --build build --config Release --target ggml-vulkan -j $(nproc)
+
+      - name: Pack artifacts
+        id: pack_artifacts
+        run: |
+          cd build/bin
+          tar -czvf ../../llama-bench-ubuntu-vulkan-x64.tar.gz ./*
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          path: llama-bench-ubuntu-vulkan-x64.tar.gz
+          name: llama-bench-ubuntu-vulkan-x64.tar.gz
+          if-no-files-found: error
+
   release:
     if: ${{ ( github.event_name == 'push' && github.ref == 'refs/heads/benchmarks' ) || github.event.inputs.create_release == 'true' }}
 
@@ -355,6 +476,8 @@ jobs:
       - windows-cpu
       - windows
       - windows-cuda
+      - ubuntu-cpu
+      - ubuntu-vulkan
 
     steps:
       - name: Clone
@@ -432,10 +555,22 @@ jobs:
 
           echo "Moving other artifacts..."
           mv -v artifact/*.zip release/ || true
+          mv -v artifact/*.tar.gz release/ || true
 
           # Rename remaining artifacts to include tag
           cd release
           for f in llama-bench-*.zip; do
+            # Skip already renamed files
+            if [[ "$f" == *"${{ steps.tag.outputs.name }}"* ]]; then
+              continue
+            fi
+            if [ -f "$f" ]; then
+              newname="llama-bench-${{ steps.tag.outputs.name }}-${f#llama-bench-}"
+              mv "$f" "$newname"
+            fi
+          done
+
+          for f in llama-bench-*.tar.gz; do
             # Skip already renamed files
             if [[ "$f" == *"${{ steps.tag.outputs.name }}"* ]]; then
               continue
@@ -464,7 +599,8 @@ jobs:
             const fs = require('fs');
             const release_id = '${{ steps.create_release.outputs.id }}';
             for (let file of await fs.readdirSync('./release')) {
-              if (path.extname(file) === '.zip') {
+              const ext = path.extname(file);
+              if (ext === '.zip' || ext === '.gz') {
                 console.log('uploadReleaseAsset', file);
                 await github.repos.uploadReleaseAsset({
                   owner: context.repo.owner,
