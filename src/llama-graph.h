@@ -433,6 +433,34 @@ public:
     const llama_memory_hybrid_context * mctx;
 };
 
+class llm_graph_input_mem_hybrid_k : public llm_graph_input_i {
+public:
+    llm_graph_input_mem_hybrid_k(
+            const llama_cparams & cparams,
+            std::unique_ptr<llm_graph_input_attn_k> inp_attn,
+            std::unique_ptr<llm_graph_input_rs>      inp_rs,
+            const llama_memory_hybrid_context *      mctx) :
+        inp_attn(std::move(inp_attn)),
+        inp_rs(std::move(inp_rs)),
+        cparams(cparams),
+        mctx(mctx) { }
+    virtual ~llm_graph_input_mem_hybrid_k() = default;
+
+    void set_input(const llama_ubatch * ubatch) override;
+
+    bool can_reuse(const llm_graph_params & params) override;
+
+    std::unique_ptr<llm_graph_input_attn_k> inp_attn;
+    std::unique_ptr<llm_graph_input_rs>      inp_rs;
+
+    llm_graph_input_attn_k * get_attn() const { return inp_attn.get(); }
+    llm_graph_input_rs      * get_recr() const { return inp_rs.get(); }
+
+    const llama_cparams cparams;
+
+    const llama_memory_hybrid_context * mctx;
+};
+
 class llm_graph_input_mem_hybrid_iswa : public llm_graph_input_i {
 public:
     llm_graph_input_mem_hybrid_iswa(
@@ -736,10 +764,11 @@ struct llm_graph_context {
              ggml_tensor * cur,
                      int   il) const;
 
-    // do mat_mul, while optionally apply lora
+    // do mat_mul, while optionally apply lora and per-tensor scale
     ggml_tensor * build_lora_mm(
               ggml_tensor * w,
-              ggml_tensor * cur) const;
+              ggml_tensor * cur,
+              ggml_tensor * w_s = nullptr) const;
 
     // do mat_mul_id, while optionally apply lora
     ggml_tensor * build_lora_mm_id(
@@ -782,11 +811,14 @@ struct llm_graph_context {
                  int64_t   n_expert_used,
          llm_ffn_op_type   type_op,
                     bool   norm_w,
-                    bool   scale_w,
                    float   w_scale,
             llama_expert_gating_func_type gating_op,
                      int   il,
-             ggml_tensor * probs_in = nullptr) const;
+             ggml_tensor * probs_in = nullptr,
+             ggml_tensor * gate_up_exps = nullptr,
+             ggml_tensor * up_exps_s = nullptr,
+             ggml_tensor * gate_exps_s = nullptr,
+             ggml_tensor * down_exps_s = nullptr) const;
 
     ggml_tensor * build_moe_ffn(
              ggml_tensor * cur,
@@ -803,11 +835,15 @@ struct llm_graph_context {
                  int64_t   n_expert_used,
          llm_ffn_op_type   type_op,
                     bool   norm_w,
-                    bool   scale_w,
                    float   w_scale,
             llama_expert_gating_func_type gating_op,
                      int   il,
-             ggml_tensor * probs_in = nullptr) const;
+             ggml_tensor * probs_in = nullptr,
+             ggml_tensor * gate_up_exps = nullptr,
+             ggml_tensor * gate_up_exps_b = nullptr,
+             ggml_tensor * up_exps_s = nullptr,
+             ggml_tensor * gate_exps_s = nullptr,
+             ggml_tensor * down_exps_s = nullptr) const;
 
     //
     // inputs
@@ -960,6 +996,7 @@ struct llm_graph_context {
     //
 
     llm_graph_input_mem_hybrid * build_inp_mem_hybrid() const;
+    llm_graph_input_mem_hybrid_k * build_inp_mem_hybrid_k() const;
 
     llm_graph_input_mem_hybrid_iswa * build_inp_mem_hybrid_iswa() const;
 
@@ -971,7 +1008,8 @@ struct llm_graph_context {
             ggml_tensor * cls,
             ggml_tensor * cls_b,
             ggml_tensor * cls_out,
-            ggml_tensor * cls_out_b) const;
+            ggml_tensor * cls_out_b,
+            ggml_tensor * cls_norm) const;
 
     //
     // sampling (backend sampling)
@@ -985,6 +1023,7 @@ struct llm_graph_context {
 
     void build_dense_out(
             ggml_tensor * dense_2,
+            ggml_tensor * dense_2_b,
             ggml_tensor * dense_3) const;
 };
 
