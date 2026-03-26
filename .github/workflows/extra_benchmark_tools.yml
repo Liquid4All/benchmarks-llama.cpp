@@ -61,8 +61,8 @@ jobs:
             -DLLAMA_BUILD_TOOLS=ON \
             -DLLAMA_BUILD_EXAMPLES=OFF \
             -DLLAMA_BUILD_TESTS=OFF \
-            -DLLAMA_BUILD_SERVER=OFF
-          cmake --build build --config Release --target llama-bench
+            -DLLAMA_BUILD_SERVER=ON
+          cmake --build build --config Release --target llama-bench --target llama-server
 
       - name: Pack artifacts
         id: pack_artifacts
@@ -108,8 +108,8 @@ jobs:
             -DLLAMA_BUILD_TOOLS=ON \
             -DLLAMA_BUILD_EXAMPLES=OFF \
             -DLLAMA_BUILD_TESTS=OFF \
-            -DLLAMA_BUILD_SERVER=OFF
-          cmake --build build --config Release -j $(sysctl -n hw.logicalcpu) --target llama-bench
+            -DLLAMA_BUILD_SERVER=ON
+          cmake --build build --config Release -j $(sysctl -n hw.logicalcpu) --target llama-bench --target llama-server
 
       - name: Pack artifacts
         id: pack_artifacts
@@ -163,8 +163,8 @@ jobs:
             -DLLAMA_BUILD_TOOLS=ON ^
             -DLLAMA_BUILD_EXAMPLES=OFF ^
             -DLLAMA_BUILD_TESTS=OFF ^
-            -DLLAMA_BUILD_SERVER=OFF
-          cmake --build build --config Release --target llama-bench
+            -DLLAMA_BUILD_SERVER=ON
+          cmake --build build --config Release --target llama-bench --target llama-server
 
       - name: Pack artifacts
         id: pack_artifacts
@@ -367,8 +367,8 @@ jobs:
             -DLLAMA_BUILD_TOOLS=ON \
             -DLLAMA_BUILD_EXAMPLES=OFF \
             -DLLAMA_BUILD_TESTS=OFF \
-            -DLLAMA_BUILD_SERVER=OFF
-          cmake --build build --config Release --target llama-bench -j $(nproc)
+            -DLLAMA_BUILD_SERVER=ON
+          cmake --build build --config Release --target llama-bench --target llama-server -j $(nproc)
 
       - name: Pack artifacts
         id: pack_artifacts
